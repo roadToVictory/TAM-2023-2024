@@ -1,12 +1,15 @@
 package com.example.myapplication
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,9 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,48 +51,59 @@ class MainActivity : ComponentActivity() {
         viewModel.getData()
         setContent {
             MyApplicationTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ShowCase(viewModel = viewModel)
-//                    MainView("Teacher Rick", "Human", "Male", "Alive",)
+                    ShowCase(
+                        viewModel = viewModel,
+                        onClick = { id -> navigateToDetailsActivity(id) }
+                    )
                 }
             }
         }
+    }
+
+    private fun navigateToDetailsActivity(rickMorty: RickMorty) {
+        val detailsIntent = Intent(this, DetailsActivity::class.java)
+        detailsIntent.putExtra("CUSTOM_ID", rickMorty.id)
+        startActivity(detailsIntent)
     }
 }
 
 
 @Composable
-fun ShowCase(viewModel: MainViewModel, modifier: Modifier = Modifier) {
+fun ShowCase(viewModel: MainViewModel, onClick: (RickMorty) -> Unit) {
     val uiState by viewModel.immutableRickMortyData.observeAsState(UiState())
 
     when {
         uiState.isLoading -> {
             LoadingView()
         }
+
         uiState.error != null -> {
             ErrorView()
         }
+
         uiState.data != null -> {
-            uiState.data?.let { RickMortyView(rickMorty = it) }
+            uiState.data?.let {
+                RickMortyView(
+                    rickMorty = it,
+                    onClick = { id -> onClick.invoke(id) }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun RickMortyView(rickMorty: List<RickMorty>) {
+fun RickMortyView(rickMorty: List<RickMorty>, onClick: (RickMorty) -> Unit) {
     LazyColumn {
-        items(rickMorty) {item ->
+        items(rickMorty) { item ->
             Log.d("Main", "${item.name}, ${item.image}")
             MainView(
-                name = item.name,
-                species = item.species,
-                gender = item.gender,
-                status = item.status,
-                image = item.image
+                rickMorty = item,
+                onClick = { id -> onClick.invoke(id) }
             )
         }
     }
@@ -99,34 +112,38 @@ fun RickMortyView(rickMorty: List<RickMorty>) {
 @Composable
 fun LoadingView() {
     CircularProgressIndicator(
-        modifier = Modifier.width(70.dp),
+        modifier = Modifier.width(50.dp),
         color = MaterialTheme.colorScheme.primary,
     )
 }
 
 @Composable
 fun ErrorView() {
-    Text(text = "Wystapil blad")
+    Toast.makeText(
+        LocalContext.current,
+        "Wystąpił błąd podczas ładowania danych",
+        Toast.LENGTH_LONG
+    ).show()
 }
 
-
 @Composable
-fun MainView(name: String, species: String, gender: String, status: String, image: String) {
+fun MainView(rickMorty: RickMorty, onClick: (RickMorty) -> Unit) {
     Column(
         modifier = Modifier
+            .clickable { onClick.invoke(rickMorty) }
             .padding(all = 2.dp)
             .shadow(1.dp)
             .fillMaxWidth()
     ) {
         Text(
-            text = name,
+            text = rickMorty.name,
             color = Color.DarkGray,
             fontSize = 28.sp,
             modifier = Modifier.align(CenterHorizontally),
         )
 
         Row {
-            Column (
+            Column(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(start = 120.dp, top = 1.dp),
             ) {
@@ -135,7 +152,7 @@ fun MainView(name: String, species: String, gender: String, status: String, imag
                     fontSize = 10.sp,
                 )
                 Text(
-                    text = species,
+                    text = rickMorty.species,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(bottom = 3.dp),
                 )
@@ -145,7 +162,7 @@ fun MainView(name: String, species: String, gender: String, status: String, imag
                     fontSize = 10.sp,
                 )
                 Text(
-                    text = gender,
+                    text = rickMorty.gender,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(bottom = 3.dp),
                 )
@@ -155,14 +172,14 @@ fun MainView(name: String, species: String, gender: String, status: String, imag
                     fontSize = 10.sp,
                 )
                 Text(
-                    text = status,
+                    text = rickMorty.status,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(bottom = 3.dp),
                 )
 
             }
             AsyncImage(
-                model = image,
+                model = rickMorty.image,
                 contentDescription = "Obrazek",
                 placeholder = painterResource(R.drawable.image),
                 modifier = Modifier
@@ -171,7 +188,6 @@ fun MainView(name: String, species: String, gender: String, status: String, imag
                     .border(border = BorderStroke(1.dp, Color.Gray))
             )
         }
-
     }
 }
 
@@ -179,8 +195,6 @@ fun MainView(name: String, species: String, gender: String, status: String, imag
 @Composable
 fun GreetingPreview() {
     MyApplicationTheme {
-//        ShowCase(MainViewModel(), Modifier)
-//        MainView("Teacher Rick", "Human", "Male", "Alive")
     }
 }
 

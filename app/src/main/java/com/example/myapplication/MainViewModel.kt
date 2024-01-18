@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.lang.Exception
 
-class MainViewModel: ViewModel() {
+class MainViewModel : ViewModel() {
 
     private val rickMortyRepository = RickMortyRepository()
     private val mutableRickMortyData = MutableLiveData<UiState<List<RickMorty>>>()
@@ -25,7 +25,7 @@ class MainViewModel: ViewModel() {
                 val request = rickMortyRepository.getRickMortyResponse()
                 Log.d("MainViewModel", "request code -> ${request.code()}")
 
-                if(request.isSuccessful) {
+                if (request.isSuccessful) {
                     val rickMorty = request.body()?.results
                     mutableRickMortyData.postValue(UiState(data = rickMorty))
                 } else {
